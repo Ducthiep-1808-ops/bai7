@@ -1,28 +1,32 @@
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s # Tần suất Prometheus kiểm tra các quy tắc cảnh báo (Alert Rules)
 
+# Khai báo kết nối tới Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093' # Tên service alertmanager trong docker-compose
+
+# Chỉ định đường dẫn chứa các tệp quy tắc cảnh báo
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+# Cấu hình danh sách các service cần thu thập metric (Scrape Configs)
 scrape_configs:
-
-  # Prometheus tự giám sát chính nó
-  - job_name: "prometheus"
+  - job_name: 'prometheus'
     static_configs:
-      - targets:
-          - "prometheus:9090"
+      - targets: ['localhost:9090']
 
-  # Host metrics
-  - job_name: "node-exporter"
+  - job_name: 'node-exporter'
     static_configs:
-      - targets:
-          - "node-exporter:9100"
+      - targets: ['node-exporter:9100']
 
-  # Docker container metrics
-  - job_name: "cadvisor"
+  - job_name: 'cadvisor'
     static_configs:
-      - targets:
-          - "cadvisor:8080"
+      - targets: ['cadvisor:8080']
 
-  # MySQL metrics
-  - job_name: "mysql"
+  - job_name: 'mysql-exporter'
     static_configs:
-      - targets:
-          - "mysql-exporter:9104"
+      - targets: ['mysql-exporter:9104']

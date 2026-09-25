@@ -21,6 +21,7 @@ services:
       - wordpress_data:/var/www/html
     networks:
       - app-network
+      - monitoring
     depends_on:
       - mysql
 
@@ -41,6 +42,7 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - app-network
+      - monitoring
 
   # =========================================================
   # PROMETHEUS
@@ -54,6 +56,7 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -64,6 +67,26 @@ services:
       - node-exporter
       - cadvisor
       - mysql-exporter
+      - alertmanager
+
+  # =========================================================
+  # ALERTMANAGER
+  # =========================================================
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/config.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - monitoring
 
   # =========================================================
   # GRAFANA
@@ -175,7 +198,6 @@ services:
     depends_on:
       - loki
 
-
 # =========================================================
 # VOLUMES
 # =========================================================
@@ -186,7 +208,7 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
-
+  alertmanager_data:
 
 # =========================================================
 # NETWORKS
@@ -195,6 +217,5 @@ volumes:
 networks:
   app-network:
     driver: bridge
-
   monitoring:
     driver: bridge

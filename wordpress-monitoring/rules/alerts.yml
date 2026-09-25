@@ -1,0 +1,47 @@
+groups:
+  - name: wordpress-mysql-alerts
+    rules:
+      # --- WordPress Alerts ---
+      - alert: WordPressHighCPU
+        expr: rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="wordpress"}[5m]) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WordPress CPU cao"
+          description: "CPU usage của WordPress > 80% trong 2 phút"
+
+      - alert: WordPressHighMemory
+        expr: container_memory_usage_bytes{container_label_com_docker_compose_service="wordpress"} / container_spec_memory_limit_bytes{container_label_com_docker_compose_service="wordpress"} * 100 > 85
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WordPress Memory cao"
+          description: "RAM usage của WordPress > 85% trong 2 phút"
+
+      # --- MySQL Alerts ---
+      - alert: MySQLTooManyConnections
+        expr: mysql_global_status_threads_connected > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL có quá nhiều kết nối"
+
+      - alert: MySQLErrorRateHigh
+        expr: rate(mysql_global_status_errors_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL có nhiều lỗi"
+
+      # --- Host / Node Exporter Alerts ---
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/rootfs"} / node_filesystem_size_bytes{mountpoint="/rootfs"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dung lượng ổ đĩa khả dụng dưới 15%"

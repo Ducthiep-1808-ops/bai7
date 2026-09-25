@@ -1,0 +1,28 @@
+global:
+  resolve_timeout: 5m
+
+# Khai báo ROUTE - Bắt buộc phải có trong Alertmanager
+route:
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-receiver'
+
+receivers:
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'your-email@gmail.com'
+        from: 'alert@yourdomain.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'your-email@gmail.com'
+        auth_identity: 'your-email@gmail.com'
+        auth_password: 'your-app-password'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname']
