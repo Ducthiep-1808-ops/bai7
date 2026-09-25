@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
 
   # =========================================================
@@ -8,25 +10,19 @@ services:
     image: wordpress:php8.2-apache
     container_name: wordpress
     restart: unless-stopped
-
     ports:
       - "8080:80"
-
     environment:
       WORDPRESS_DB_HOST: mysql:3306
       WORDPRESS_DB_USER: wpuser
       WORDPRESS_DB_PASSWORD: wppass
       WORDPRESS_DB_NAME: wpdb
-
     volumes:
       - wordpress_data:/var/www/html
-
     networks:
       - app-network
-
     depends_on:
       - mysql
-
 
   # =========================================================
   # MYSQL
@@ -36,19 +32,15 @@ services:
     image: mysql:8.0
     container_name: mysql
     restart: unless-stopped
-
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: wpdb
       MYSQL_USER: wpuser
       MYSQL_PASSWORD: wppass
-
     volumes:
       - mysql_data:/var/lib/mysql
-
     networks:
       - app-network
-
 
   # =========================================================
   # PROMETHEUS
@@ -58,26 +50,20 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
-
     ports:
       - "9090:9090"
-
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
-
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-
     networks:
       - monitoring
-
     depends_on:
       - node-exporter
       - cadvisor
       - mysql-exporter
-
 
   # =========================================================
   # GRAFANA
@@ -87,19 +73,15 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
-
     ports:
       - "3000:3000"
-
     volumes:
       - grafana_data:/var/lib/grafana
-
     networks:
       - monitoring
-
     depends_on:
       - prometheus
-
+      - loki
 
   # =========================================================
   # NODE EXPORTER
@@ -109,23 +91,18 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
-
     ports:
       - "9100:9100"
-
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-
     command:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
       - "--path.rootfs=/rootfs"
-
     networks:
       - monitoring
-
 
   # =========================================================
   # CADVISOR
@@ -135,19 +112,15 @@ services:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     restart: unless-stopped
-
     ports:
       - "8081:8080"
-
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
-
     networks:
       - monitoring
-
 
   # =========================================================
   # MYSQL EXPORTER
@@ -157,19 +130,50 @@ services:
     image: prom/mysqld-exporter:latest
     container_name: mysql-exporter
     restart: unless-stopped
-
     ports:
       - "9104:9104"
-
     environment:
       DATA_SOURCE_NAME: "wpuser:wppass@tcp(mysql:3306)/wpdb"
-
     networks:
       - app-network
       - monitoring
-
     depends_on:
       - mysql
+
+  # =========================================================
+  # LOKI
+  # =========================================================
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - monitoring
+
+  # =========================================================
+  # PROMTAIL
+  # =========================================================
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring
+    depends_on:
+      - loki
 
 
 # =========================================================
@@ -181,6 +185,7 @@ volumes:
   mysql_data:
   prometheus_data:
   grafana_data:
+  loki_data:
 
 
 # =========================================================
